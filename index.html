@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>행정재산 사용료/변상금/연체료 계산기</title>
+<style>
+    /* ==================== 1. 기본 레이아웃 ==================== */
+    .calc-container {
+        position: relative;
+        font-family: 'Pretendard', 'Malgun Gothic', '맑은 고딕', sans-serif;
+        color: #333;
+        background-color: #f4f7f9;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 100%;
+        box-sizing: border-box;
+        line-height: 1.5;
+    }
+    .calc-container * { box-sizing: border-box; }
+
+    /* ★ 추가된 메인 타이틀 스타일 ★ */
+    .calc-container .main-title {
+        font-size: 26px;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0 0 20px 0;
+        text-align: left;
+        letter-spacing: -0.5px;
+    }
+
+    /* 인쇄 전용 제목 및 헤더 (화면에서는 숨김) */
+    .calc-container .print-title { display: none; text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 20px; text-decoration: underline; text-underline-position: under; }
+    .calc-container .print-excel-header { display: none; width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    .calc-container .print-excel-header th, .calc-container .print-excel-header td { border: 1px solid #000; padding: 8px; text-align: center; font-size: 13px; }
+    .calc-container .print-excel-header th { background-color: #e2e2e2; font-weight: bold; }
+    
+    /* 전체 프린트 버튼 (탭 2 내부 위치) */
+    .btn-print-all {
+        background-color: #8e44ad; color: white;
+        border: none; padding: 10px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        display: inline-flex; align-items: center;
+    }
+    .btn-print-all:hover { background-color: #732d91; }
+
+    /* ==================== 2. 탭 스타일 ==================== */
+    .calc-container .tabs { display: flex; margin-bottom: 20px; padding: 0; margin-top: 10px; }
+    .calc-container .tab-button {
+        flex: 1; padding: 15px; text-align: center; background-color: #e2e8f0;
+        border: none; margin-right: 5px; border-radius: 8px 8px 0 0; 
+        cursor: pointer; font-size: 1.1rem; font-weight: bold; color: #64748b; 
+        transition: all 0.2s ease-in-out;
+    }
+    .calc-container .tab-button:last-child { margin-right: 0; }
+    .calc-container .tab-button.active { background-color: #3b5b82; color: white; }
+    
+    .calc-container .tab-content { display: none; }
+    .calc-container .tab-content.active { display: block; animation: gFadeIn 0.3s; }
+    @keyframes gFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ==================== 3. 카드형 디자인 ==================== */
+    .calc-container .card-header-bar {
+        background-color: #3b5b82; color: #ffffff; padding: 18px 25px; border-radius: 8px;
+        margin-bottom: 20px; font-size: 1.3rem; font-weight: bold;
+        display: flex; justify-content: space-between; align-items: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .calc-container .card-block {
+        background-color: #ffffff; padding: 25px; border-radius: 10px; margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .calc-container .card-block h3 {
+        font-size: 1.2rem; color: #1e293b; margin-top: 0; margin-bottom: 20px;
+        border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* ==================== 4. 폼, 테이블 및 설명서 ==================== */
+    .calc-container .global-settings { background-color: #f8fafc; padding: 20px; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .calc-container .global-settings table { width: 100%; border: none; }
+    .calc-container .global-settings td { padding: 8px 0; border: none; text-align: left; vertical-align: middle; }
+    .calc-container .global-settings .label-td { font-weight: bold; color: #334155; width: 100px; }
+    .calc-container .global-settings .colon-td { font-weight: bold; color: #334155; width: 15px; }
+    
+    .calc-container .fee-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+    .calc-container .fee-table th, .calc-container .fee-table td { border: 1px solid #cbd5e1; padding: 8px 6px; text-align: center; vertical-align: middle; }
+    .calc-container .fee-table th { background-color: #f1f5f9; color: #334155; white-space: nowrap; font-size: 0.9rem; font-weight: bold; }
+    .calc-container .fee-table td input[type="number"], .calc-container .fee-table td input[type="text"], .calc-container .fee-table td input[type="date"], .calc-container .fee-table td select {
+        width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; font-size: 0.85rem; background: #fff; box-sizing: border-box;
+    }
+    .calc-container .fee-table td input:disabled { background-color: #e2e8f0; cursor: not-allowed; }
+    
+    .calc-container .checkbox-container { display: flex; flex-direction: column; align-items: center; text-align: center; font-size: 0.8rem;}
+    .calc-container .checkbox-container label { cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; }
+    
+    .calc-container .plus-amt { color: #e74c3c; font-weight: bold; font-size: 0.85rem; display: block; margin-top: 5px; }
+    .calc-container .minus-amt { color: #27ae60; font-weight: bold; font-size: 0.85rem; display: block; margin-top: 5px; }
+    
+    /* 파란색 사용 설명서 박스 */
+    .calc-container .manual-blue-box {
+        background-color: #f0f9ff; border: 1px solid #bae6fd; border-left: 4px solid #0284c7;
+        padding: 18px; border-radius: 6px; margin-top: 15px; margin-bottom: 15px;
+        font-size: 0.95rem; color: #0369a1; line-height: 1.6;
+    }
+    .calc-container .manual-blue-box strong { color: #0284c7; font-size: 1.05rem; }
+    .calc-container .manual-blue-box ol { margin: 10px 0 0 0; padding-left: 20px; }
+    .calc-container .manual-blue-box li { margin-bottom: 5px; }
+    .calc-container .manual-blue-box .note-text { color: #64748b; font-size: 0.85rem; margin-top: 10px; display: block; }
+    .calc-container .manual-blue-box a:hover { text-decoration: underline !important; }
+
+    /* ==================== 5. 버튼 스타일 ==================== */
+    .calc-container button { cursor: pointer; font-weight: bold; transition: 0.2s; outline: none; }
+    .calc-container .btn-add { background-color: #3b5b82; color: white; margin-top: 10px; padding: 10px 20px; border: none; border-radius: 5px; }
+    .calc-container .btn-delete { background-color: #ef4444; color: white; padding: 5px 10px; font-size: 0.8rem; border: none; border-radius: 4px; }
+    .calc-container .btn-print { background-color: #475569; color: white; font-size: 0.95rem; padding: 8px 15px; border: none; border-radius: 5px; display: inline-flex; align-items: center; gap: 5px;}
+
+    /* ==================== 6. 결과 요약 박스 ==================== */
+    .calc-container .grand-total-box {
+        margin-top: 20px; padding: 25px; background-color: #f1f5f9; border-radius: 8px;
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 1.2rem; font-weight: bold; color: #1e293b; border-left: 5px solid #3b5b82;
+    }
+    .calc-container .total-val { color: #dc2626; font-size: 1.8rem; margin: 0 5px; }
+
+    /* 라디오 버튼 그룹 */
+    .radio-group { display: flex; gap: 20px; margin-bottom: 15px; padding: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+    .radio-group label { display: flex; align-items: center; cursor: pointer; font-weight: bold; font-size: 1rem; color: #334155; }
+    .radio-group input[type="radio"] { margin-right: 8px; width: 18px; height: 18px; }
+
+    /* ==================== 7. 인쇄 전용 ==================== */
+    @media print {
+        @page { size: A4 landscape; margin: 10mm; } 
+        body * { visibility: hidden !important; }
+        .calc-container, .calc-container * { visibility: visible !important; }
+        .calc-container { position: absolute; left: 0; top: 0; width: 100%; background-color: white !important; padding: 0 !important; margin: 0 !important; }
+        
+        .calc-container .tabs, .calc-container .print-hide, .calc-container .btn-print, .btn-print-all { display: none !important; }
+        .calc-container .global-settings, .radio-group { display: none !important; }
+        
+        .calc-container .print-excel-header { display: table !important; }
+        .calc-container .print-title { display: block !important; margin-top: 0; }
+        
+        .calc-container .card-block { box-shadow: none !important; border: none !important; padding: 0 !important; margin-bottom: 30px !important; }
+        .calc-container .card-header-bar { display: none !important; }
+
+        .calc-container .fee-table { border: 2px solid #000 !important; width: 100% !important; table-layout: fixed; }
+        .calc-container .fee-table th, .calc-container .fee-table td { border: 1px solid #000 !important; color: #000 !important; padding: 4px !important; font-size: 11px !important; word-wrap: break-word; }
+        .calc-container .fee-table th { background-color: #e2e2e2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold !important; }
+        
+        .calc-container input, .calc-container select { 
+            border: none !important; background: transparent !important; color: #000 !important;
+            -webkit-appearance: none; -moz-appearance: none; appearance: none;
+            padding: 0 !important; margin: 0 !important; font-size: 11px !important; 
+            font-weight: bold !important; width: 100% !important; text-align: center !important; 
+        }
+        .calc-container input[type="date"]::-webkit-calendar-picker-indicator { display: none !important; }
+
+        .calc-container .grand-total-box { 
+            background: transparent !important; border: none !important; border-top: 2px solid #000 !important; border-bottom: 2px double #000 !important;
+            border-radius: 0 !important; justify-content: flex-end !important; padding: 10px 0 !important; margin-top: 10px !important;
+        }
+        .calc-container .total-val { color: #000 !important; font-size: 14px !important; }
+
+        .calc-container[data-print-mode="admin"] #tab-penalty { display: none !important; }
+        .calc-container[data-print-mode="admin"] #tab-admin { display: block !important; }
+        
+        .calc-container[data-print-mode="indemnity"] #tab-admin { display: none !important; }
+        .calc-container[data-print-mode="indemnity"] #tab-penalty { display: block !important; }
+        .calc-container[data-print-mode="indemnity"] .latefee-section { display: none !important; }
+
+        .calc-container[data-print-mode="latefee"] #tab-admin { display: none !important; }
+        .calc-container[data-print-mode="latefee"] #tab-penalty { display: block !important; }
+        .calc-container[data-print-mode="latefee"] .indemnity-section { display: none !important; }
+
+        .calc-container[data-print-mode="all_penalty"] #tab-admin { display: none !important; }
+        .calc-container[data-print-mode="all_penalty"] #tab-penalty { display: block !important; }
+        .calc-container[data-print-mode="all_penalty"] .latefee-section { display: block !important; }
+        .calc-container[data-print-mode="all_penalty"] .indemnity-section { display: block !important; page-break-after: always; }
+    }
+</style>
+</head>
+<body>
+
+<div class="calc-container" data-print-mode="admin">
+    <!-- ★ 추가된 메인 타이틀 (가장 왼쪽 상단 표시용) ★ -->
+    <h1 class="main-title print-hide">행정재산 일시사용료, 변상금, 연체료 모의 계산기</h1>
+
+    <h1 class="print-title" id="gPrintTitle">행정재산 일시사용료 산출내역서</h1>
+
+    <!-- 탭 메뉴 -->
+    <div class="tabs print-hide">
+        <button class="tab-button active" onclick="gOpenTab('tab-admin', this)">행정재산 일시사용료 계산기</button>
+        <button class="tab-button" onclick="gOpenTab('tab-penalty', this)">변상금, 연체료 다년도 정밀 계산기</button>
+    </div>
+
+    <!-- ==================== 탭 1: 행정재산 일시사용료 계산기 ==================== -->
+    <div id="tab-admin" class="tab-content active">
+        <div class="card-header-bar print-hide">
+            <div>행정재산 일시사용료 계산기</div>
+        </div>
+        <div class="card-block">
+            <h3 class="print-hide">1. 기본 설정</h3>
+            <table class="print-excel-header">
+                <tr>
+                    <th width="20%">사용 유형</th>
+                    <td width="30%" id="printUseTerm">일시 사용 (1일 기준)</td>
+                    <th width="20%">재산 유형</th>
+                    <td width="30%" id="printPropType">교실</td>
+                </tr>
+            </table>
+            <div class="global-settings print-hide">
+                <table>
+                    <tr>
+                        <td class="label-td">■ 사용 유형</td>
+                        <td class="colon-td">:</td>
+                        <td>
+                            <label style="margin-right:20px;"><input type="radio" name="gUseTerm" value="short" checked onchange="gRecalcAll()"> 일시 사용 (1일 기준)</label>
+                            <label><input type="radio" name="gUseTerm" value="long" onchange="gRecalcAll()"> 1개월 이상 장기</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label-td">■ 재산 유형</td>
+                        <td class="colon-td">:</td>
+                        <td>
+                            <select id="gPropTypeGlobal" onchange="gRecalcAll()" style="padding:6px; border:1px solid #cbd5e1; border-radius:4px; width:200px; font-size:1rem;">
+                                <option value="교실" selected>교실</option>
+                                <option value="체육관">체육관(강당)</option>
+                                <option value="운동장">운동장</option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="manual-blue-box print-hide">
+                <strong>💡 사용 설명서</strong>
+                <ol>
+                    <li>사용유형을 선택합니다.</li>
+                    <li>재산유형을 선택합니다.</li>
+                    <li>하단 산출내역에서 사용기간, 사용 시간, 사용 일수를 입력합니다. (일 당 사용시간 입력 시 자동 계산)</li>
+                    <li>가산 여부와 감면 여부를 해당 시 체크합니다. (감면 요율은 수기 조정 가능)</li>
+                </ol>
+                <span class="note-text">
+                    ※ 행 추가 필요 시 산출 행 추가하기 클릭<br>
+                    ※ 인쇄 필요시 인쇄(산출내역) 버튼 클릭
+                </span>
+            </div>
+        </div>
+        
+        <div class="card-block">
+            <h3 class="print-hide">2. 산출 내역</h3>
+            <div style="overflow-x:auto;">
+                <table class="fee-table">
+                    <thead>
+                        <tr>
+                            <th width="12%">재산명</th>
+                            <th width="18%">사용기간(날짜)</th>
+                            <th width="12%">사용시간</th>
+                            <th width="8%">사용일수</th>
+                            <th width="12%">기준 금액(단가)</th>
+                            <th width="14%">가산(냉난방기)</th>
+                            <th width="14%">감면(지역주민)</th>
+                            <th width="10%">합계(원)</th>
+                            <th width="5%" class="print-hide">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gFeeTableBody">
+                        <!-- 동적 추가 행 -->
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn-add print-hide" onclick="gAddRow()">+ 산출 행 추가하기</button>
+            
+            <div class="grand-total-box">
+                <div class="print-hide"><button class="btn-print" onclick="customPrint('admin')">🖨️ 인쇄(산출내역)</button></div>
+                <div>총 청구 금액 <span class="total-val" id="gGrandTotal">0</span> 원</div>
+            </div>
+            <div style="text-align:right; font-size:0.85rem; color:#64748b; margin-top:5px;" class="print-hide">* 산출 금액은 원 단위로 표시됩니다.</div>
+        </div>
+    </div>
+
+    <!-- ==================== 탭 2: 변상금, 연체료 정밀 계산기 ==================== -->
+    <div id="tab-penalty" class="tab-content">
+        
+        <div style="text-align: right; margin-bottom: 15px;" class="print-hide">
+            <button class="btn-print-all" onclick="customPrint('all_penalty')">🖨️ 전체 프린트 (변상금+연체료)</button>
+        </div>
+
+        <!-- 변상금 섹션 -->
+        <div class="card-block indemnity-section">
+            <h3 class="print-hide">1. 연도별 변상금 정밀 산출</h3>
+            
+            <div class="radio-group print-hide">
+                <label><input type="radio" name="indemType" value="land" checked onchange="changeIndemType()"> 토지 (개별공시지가)</label>
+                <label><input type="radio" name="indemType" value="building" onchange="changeIndemType()"> 건물 (시가표준액)</label>
+                <label><input type="radio" name="indemType" value="fee" onchange="changeIndemType()"> 사용료 기준</label>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="fee-table">
+                    <thead>
+                        <tr>
+                            <th width="20%">점유 연도 (기간)</th>
+                            <th width="10%">일수</th>
+                            <th width="12%">점유면적 (㎡)</th>
+                            <th width="15%" id="thIndemPrice">개별공시지가 (원)</th>
+                            <th width="10%">사용요율(%)</th>
+                            <th width="10%">할증</th>
+                            <th width="15%">산출 변상금 (원)</th>
+                            <th width="8%" class="print-hide">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="indemnityTableBody">
+                        <!-- 변상금 동적 행 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <button class="btn-add print-hide" onclick="addIndemRow()">+ 연도별 시트(행) 추가</button>
+            
+            <div class="manual-blue-box print-hide">
+                <strong>💡 변상금 산출 설명서</strong>
+                <div style="margin-top:5px; font-size:0.95rem;">
+                    ※ <a href="https://www.realtyprice.kr/notice/main/main.do" target="_blank" style="color:#0284c7; text-decoration:none; font-weight:bold;">부동산공시가격 알리미 (www.realtyprice.kr)</a>
+                </div>
+                <ol>
+                    <li>재산유형(토지/건물/사용료)을 먼저 선택합니다.</li>
+                    <li>점유 기간이 1년을 초과할 경우, [행 추가] 버튼을 눌러 회계연도(예: 2023년, 2024년)별로 나누어 입력합니다.</li>
+                    <li>각 연도별 <strong>면적</strong>, <strong>공시지가(또는 시가표준액)</strong>, <strong>사용요율</strong>을 입력합니다. (사용료 선택 시 면적 입력은 비활성화됩니다.)</li>
+                    <li>변상금은 <code>재산가액 × 요율 × 120% × (점유일수/365)</code> 공식으로 자동 계산됩니다.</li>
+                </ol>
+                <span class="note-text" style="margin-bottom:15px;">※ 인쇄가 필요할 경우 인쇄 클릭</span>
+                
+                <strong>[점유 개시일]</strong>
+                <ol style="margin-bottom:15px;">
+                    <li>아무런 권원 없이 점유를 시작한 경우, 실제로 점유를 개시한 날이 기준</li>
+                    <li>사용허가나 대부계약 기간이 끝난 후 재계약 없이 계속 점유하는 경우, 기존 계약 기간이 종료된 다음 날부터 무단 점유 기간으로 계산</li>
+                </ol>
+
+                <strong>[점유 종료일]</strong>
+                <ol>
+                    <li>무단 점유를 지속하고 있는 경우, 변상금 부과 고지일 또는 지방자치단체의 장이 정한 기준일까지의 기간을 산정</li>
+                    <li>건물로 무단 점유한 경우에는 해당 건물의 거주 여부와 관계없이 시설물이 완전히 철거될 때까지를 점유 기간으로 봄</li>
+                </ol>
+                <span class="note-text">※ 기간 계산 및 소급 제한 등 세부 사항은 관련 지침 확인</span>
+
+                <!-- 변상금 관련 법령 링크 추가 -->
+                <div style="margin-top:20px; border-top: 1px dashed #bae6fd; padding-top:15px;">
+                    <strong>※ 관련 법령</strong>
+                    <ul style="margin:5px 0 0 0; padding-left:20px;">
+                        <li><a href="https://www.law.go.kr/법령/국유재산법" target="_blank" style="color:#0284c7; text-decoration:none;">국유재산법</a></li>
+                        <li><a href="https://www.law.go.kr/법령/공유재산및물품관리법" target="_blank" style="color:#0284c7; text-decoration:none;">공유재산 및 물품 관리법</a></li>
+                        <li><a href="https://www.law.go.kr/법령/공유재산및물품관리법시행령" target="_blank" style="color:#0284c7; text-decoration:none;">공유재산 및 물품 관리법 시행령</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grand-total-box">
+                <div class="print-hide"><button class="btn-print" onclick="customPrint('indemnity')">🖨️ 인쇄(변상금)</button></div>
+                <div>총 변상금 부과액 <span class="total-val" id="indemGrandTotal">0</span> 원</div>
+            </div>
+        </div>
+
+        <!-- 연체료 섹션 -->
+        <div class="card-block latefee-section">
+            <h3 class="print-hide">2. 연체료 다년도(구간별) 산출</h3>
+            
+            <div style="margin-bottom: 10px; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;" class="print-hide">
+                <label style="display:flex; align-items:center; cursor:pointer; font-weight:bold; color:#0f172a;">
+                    <input type="checkbox" id="chkDisaster" style="width:20px; height:20px; margin-right:10px;" onchange="recalcAllLateRows()">
+                    재난 인하 대상 (산출된 연체 요율의 50% 감면 일괄 적용)
+                </label>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="fee-table">
+                    <thead>
+                        <tr>
+                            <th width="22%">연체 기간</th>
+                            <th width="10%">일수</th>
+                            <th width="20%">연체 대상 금액 (원)</th>
+                            <th width="20%">적용 연체요율</th>
+                            <th width="20%">산출 연체료 (원)</th>
+                            <th width="8%" class="print-hide">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="latefeeTableBody">
+                        <!-- 연체료 동적 행 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn-add print-hide" onclick="addLateRow()">+ 연체 구간 시트(행) 추가</button>
+
+            <div class="manual-blue-box print-hide">
+                <strong>💡 연체료 산출 설명서</strong>
+                <ol>
+                    <li>변상금 발생 연도별로 연체 기간과 연체 대상 금액(체납액)을 입력합니다.</li>
+                    <li>연체 기간에 따라 연체 요율(7%, 8%, 9%, 10%)이 자동으로 판별되어 적용됩니다.</li>
+                    <li><code>체납액 × 연체요율 × (연체일수/365)</code> 공식으로 자동 산출됩니다.</li>
+                </ol>
+                <span class="note-text">
+                    ※ 고지용 최종 총 연체료는 국고금단수계산법에 따라 10원 미만을 절사합니다.<br>
+                    ※ 인쇄가 필요할 경우 인쇄 버튼 클릭<br>
+                    ※ 연체료 관련 세부 사항은 관련 지침 확인
+                </span>
+
+                <!-- 연체료 관련 법령 링크 추가 -->
+                <div style="margin-top:20px; border-top: 1px dashed #bae6fd; padding-top:15px;">
+                    <strong>※ 관련 법령</strong>
+                    <ul style="margin:5px 0 0 0; padding-left:20px;">
+                        <li><a href="https://www.law.go.kr/법령/공유재산및물품관리법" target="_blank" style="color:#0284c7; text-decoration:none;">공유재산 및 물품 관리법</a></li>
+                        <li><a href="https://www.law.go.kr/법령/공유재산및물품관리법시행령" target="_blank" style="color:#0284c7; text-decoration:none;">공유재산 및 물품 관리법 시행령</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grand-total-box">
+                <div class="print-hide"><button class="btn-print" onclick="customPrint('latefee')">🖨️ 인쇄(연체료)</button></div>
+                <div style="text-align:right;">
+                    <div>총 연체료 청구액 <span class="total-val" id="lateGrandTotal">0</span> 원</div>
+                    <div style="font-size:0.85rem; color:#64748b; font-weight:normal; margin-top:5px;" class="print-hide">* 고지용 연체료는 10원 미만을 절사합니다.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // =========================================================================
+    // 0. 공통 유틸리티
+    // =========================================================================
+    function gOpenTab(tabId, element) {
+        var wrap = document.querySelector('.calc-container');
+        wrap.querySelectorAll('.tab-content').forEach(function(tab) { tab.classList.remove('active'); });
+        wrap.querySelectorAll('.tab-button').forEach(function(btn) { btn.classList.remove('active'); });
+        document.getElementById(tabId).classList.add('active');
+        element.classList.add('active');
+    }
+
+    function customPrint(mode) {
+        var wrap = document.querySelector('.calc-container');
+        wrap.setAttribute('data-print-mode', mode);
+
+        var printTitle = document.getElementById('gPrintTitle');
+        if(mode === 'admin') printTitle.innerText = '행정재산 일시사용료 산출내역서';
+        else if(mode === 'indemnity') printTitle.innerText = '변상금 산출내역서';
+        else if(mode === 'latefee') printTitle.innerText = '연체료 산출내역서';
+        else if(mode === 'all_penalty') printTitle.innerText = '변상금 및 연체료 산출내역서';
+
+        window.print();
+    }
+
+    function gFormatCurrency(input) {
+        var value = input.value.replace(/[^0-9]/g, '');
+        if (value) {
+            input.value = parseInt(value, 10).toLocaleString('ko-KR');
+        } else {
+            input.value = '';
+        }
+        // 트리거 이벤트 발생 (계산 업데이트용)
+        if (input.oninput) input.oninput();
+    }
+
+    // =========================================================================
+    // 1. 탭 1: 행정재산 일시사용료 계산기
+    // =========================================================================
+    document.addEventListener("DOMContentLoaded", function() {
+        if(document.getElementById('gFeeTableBody').children.length === 0) gAddRow();
+        if(document.getElementById('indemnityTableBody').children.length === 0) addIndemRow();
+        if(document.getElementById('latefeeTableBody').children.length === 0) addLateRow();
+    });
+
+    function gAddRow() {
+        var tbody = document.getElementById('gFeeTableBody');
+        var tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="prop-name-display" style="font-weight:bold; color:#0f172a;">교실</td>
+            <td>
+                <input type="date" class="use-start-date" style="margin-bottom:4px;">
+                <div style="text-align:center; font-size:0.8rem; font-weight:bold; color:#94a3b8; line-height:1;" class="print-hide">~</div>
+                <input type="date" class="use-end-date" style="margin-top:4px;">
+            </td>
+            <td>
+                <input type="number" class="use-hours-num" placeholder="시간입력" min="1" oninput="gCalcRow(this)">
+                <select class="use-hours-sel" onchange="gCalcRow(this)" style="display:none; width:100%;">
+                    <option value="10000">4시간 이하</option>
+                    <option value="20000">4시간 초과</option>
+                </select>
+            </td>
+            <td><input type="number" class="use-days" value="1" min="1" oninput="gCalcRow(this)"></td>
+            <td><span class="base-amt" style="font-weight:bold;">0</span></td>
+            <td>
+                <div class="checkbox-container print-hide">
+                    <label><input type="checkbox" class="chk-hvac" onchange="gCalcRow(this)" disabled> 냉난방 20%</label>
+                    <label><input type="checkbox" class="chk-gym-large" onchange="gCalcRow(this)" disabled> 660㎡↑ 50%</label>
+                </div>
+                <span class="hvac-amt plus-amt">+ 0</span>
+            </td>
+            <td>
+                <div class="checkbox-container print-hide">
+                    <label style="display:flex; align-items:center;">
+                        <input type="checkbox" class="chk-resident" onchange="gCalcRow(this)"> 
+                        감면 <input type="number" class="discount-rate" value="60" min="0" max="60" style="width:40px; padding:2px; margin:0 3px; text-align:center;" oninput="gCalcRow(this)">%
+                    </label>
+                </div>
+                <span class="discount-amt minus-amt">- 0</span>
+            </td>
+            <td><span class="total-amt" style="font-weight:bold; font-size:1.1rem; color:#0f172a;">0</span></td>
+            <td class="print-hide"><button class="btn-delete" onclick="gDelRow(this)">삭제</button></td>
+        `;
+        tbody.appendChild(tr);
+        gRecalcAll();
+    }
+
+    function gDelRow(btn) {
+        var tbody = document.getElementById('gFeeTableBody');
+        if (tbody.children.length > 1) {
+            btn.closest('tr').remove();
+            gCalcGrandTotal();
+        } else alert("최소 1개의 내역은 존재해야 합니다.");
+    }
+
+    function gRecalcAll() {
+        var globalProp = document.getElementById('gPropTypeGlobal').value;
+        var globalTerm = document.querySelector('input[name="gUseTerm"]:checked').value;
+        document.getElementById('printPropType').innerText = globalProp;
+        document.getElementById('printUseTerm').innerText = (globalTerm === 'short') ? '일시 사용 (1일 기준)' : '1개월 이상 장기';
+        document.querySelectorAll('#gFeeTableBody tr').forEach(function(tr) { 
+            tr.querySelector('.prop-name-display').innerText = globalProp;
+            gCalcRow(tr.querySelector('.use-days')); 
+        });
+    }
+
+    function gCalcRow(element) {
+        var tr = element.closest('tr');
+        var prop = document.getElementById('gPropTypeGlobal').value;
+        var term = document.querySelector('input[name="gUseTerm"]:checked').value;
+        var numInput = tr.querySelector('.use-hours-num');
+        var selInput = tr.querySelector('.use-hours-sel');
+        var daysInput = tr.querySelector('.use-days');
+        
+        if (prop === '교실') { numInput.style.display = 'none'; selInput.style.display = 'block'; } 
+        else { numInput.style.display = 'block'; selInput.style.display = 'none'; }
+
+        var hours = parseFloat(numInput.value) || 0;
+        var classroomPrice = parseInt(selInput.value) || 10000;
+        var days = parseFloat(daysInput.value) || 1;
+
+        var chkHvac = tr.querySelector('.chk-hvac');
+        var chkGymLarge = tr.querySelector('.chk-gym-large');
+        var chkResident = tr.querySelector('.chk-resident');
+        var discountRateInput = tr.querySelector('.discount-rate');
+        var discountRate = parseFloat(discountRateInput.value) || 0; 
+        if (discountRate > 60) { discountRate = 60; discountRateInput.value = 60; }
+
+        if (prop === '교실' || prop === '체육관') chkHvac.disabled = false;
+        else { chkHvac.checked = false; chkHvac.disabled = true; }
+
+        if (prop === '체육관' && chkHvac.checked) chkGymLarge.disabled = false;
+        else { chkGymLarge.checked = false; chkGymLarge.disabled = true; }
+
+        var unitPrice = 0;
+        if (prop === '교실') unitPrice = classroomPrice; 
+        else if (term === 'short') {
+            if (prop === '체육관') unitPrice = (hours <= 2) ? 20000 : (hours <= 4) ? 40000 : 60000;
+            else if (prop === '운동장') unitPrice = (hours <= 2) ? 30000 : (hours <= 4) ? 60000 : 80000;
+        } else if (term === 'long') {
+            if (prop === '체육관') unitPrice = hours * 5000;
+            else if (prop === '운동장') unitPrice = hours * 10000;
+        }
+
+        var baseAmt = unitPrice * days;
+        var hvacAmt = chkHvac.checked ? ((prop === '체육관' && chkGymLarge.checked) ? baseAmt * 0.5 : baseAmt * 0.2) : 0;
+        var discountAmt = chkResident.checked ? (baseAmt + hvacAmt) * (discountRate / 100) : 0;
+        var totalAmt = Math.floor(baseAmt + hvacAmt - discountAmt);
+
+        tr.querySelector('.base-amt').innerText = baseAmt.toLocaleString();
+        tr.querySelector('.hvac-amt').innerText = '+ ' + Math.floor(hvacAmt).toLocaleString();
+        tr.querySelector('.discount-amt').innerText = '- ' + Math.floor(discountAmt).toLocaleString();
+        tr.querySelector('.total-amt').innerText = totalAmt.toLocaleString();
+        tr.setAttribute('data-total', totalAmt);
+        gCalcGrandTotal();
+    }
+
+    function gCalcGrandTotal() {
+        var grandTotal = 0;
+        document.querySelectorAll('#gFeeTableBody tr').forEach(function(row) { grandTotal += parseInt(row.getAttribute('data-total')) || 0; });
+        document.getElementById('gGrandTotal').innerText = grandTotal.toLocaleString();
+    }
+
+    // =========================================================================
+    // 2. 탭 2: 다년도 변상금 계산 로직
+    // =========================================================================
+    
+    // 라디오 버튼 선택 시 테이블 헤더 및 입력창 제어
+    function changeIndemType() {
+        var type = document.querySelector('input[name="indemType"]:checked').value;
+        var thPrice = document.getElementById('thIndemPrice');
+        
+        if (type === 'land') thPrice.innerText = '개별공시지가 (원)';
+        else if (type === 'building') thPrice.innerText = '시가표준액 (원)';
+        else if (type === 'fee') thPrice.innerText = '사용료 (원)';
+
+        var rows = document.querySelectorAll('#indemnityTableBody tr');
+        rows.forEach(function(tr) {
+            var areaInput = tr.querySelector('.indem-area');
+            if (type === 'fee') {
+                areaInput.value = '';
+                areaInput.disabled = true;
+            } else {
+                areaInput.disabled = false;
+            }
+            calcIndemRow(areaInput); // 재계산
+        });
+    }
+
+    function addIndemRow() {
+        var tbody = document.getElementById('indemnityTableBody');
+        var tr = document.createElement('tr');
+        var type = document.querySelector('input[name="indemType"]:checked').value;
+        var areaDisabled = (type === 'fee') ? 'disabled' : '';
+
+        tr.innerHTML = `
+            <td>
+                <input type="date" class="indem-start" style="margin-bottom:4px;" onchange="calcIndemRow(this)">
+                <div style="text-align:center; font-size:0.8rem; font-weight:bold; color:#94a3b8; line-height:1;" class="print-hide">~</div>
+                <input type="date" class="indem-end" style="margin-top:4px;" onchange="calcIndemRow(this)">
+            </td>
+            <td><span class="indem-days-txt" style="font-weight:bold;">0</span>일</td>
+            <td><input type="number" class="indem-area" placeholder="면적" oninput="calcIndemRow(this)" ${areaDisabled}></td>
+            <td><input type="text" class="indem-price" placeholder="금액 입력" onkeyup="gFormatCurrency(this)"></td>
+            <td><input type="number" class="indem-rate" step="0.1" placeholder="요율(%)" oninput="calcIndemRow(this)"></td>
+            <td><span style="font-weight:bold; color:#e74c3c;">120%</span></td>
+            <td><span class="indem-row-total" style="font-weight:bold; font-size:1.1rem; color:#0f172a;">0</span></td>
+            <td class="print-hide"><button class="btn-delete" onclick="delIndemRow(this)">삭제</button></td>
+        `;
+        // input 이벤트 리스너를 gFormatCurrency 실행시 강제 호출하기 위해 바인딩 오버라이드
+        var priceInput = tr.querySelector('.indem-price');
+        priceInput.oninput = function() { calcIndemRow(this); };
+        
+        tbody.appendChild(tr);
+    }
+
+    function delIndemRow(btn) {
+        var tbody = document.getElementById('indemnityTableBody');
+        if (tbody.children.length > 1) {
+            btn.closest('tr').remove();
+            calcIndemGrandTotal();
+        } else alert("최소 1개의 연도 시트는 존재해야 합니다.");
+    }
+
+    function calcIndemRow(element) {
+        var tr = element.closest('tr');
+        var type = document.querySelector('input[name="indemType"]:checked').value;
+        
+        // 일수 계산
+        var startStr = tr.querySelector('.indem-start').value;
+        var endStr = tr.querySelector('.indem-end').value;
+        var days = 0;
+        if(startStr && endStr) {
+            var start = new Date(startStr);
+            var end = new Date(endStr);
+            if(end >= start) {
+                // 양일 모두 포함 (+1)
+                days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 3600 * 24)) + 1;
+            }
+        }
+        tr.querySelector('.indem-days-txt').innerText = days;
+
+        // 가액 산출
+        var area = parseFloat(tr.querySelector('.indem-area').value) || 0;
+        var price = parseFloat(tr.querySelector('.indem-price').value.replace(/,/g, '')) || 0;
+        var rate = parseFloat(tr.querySelector('.indem-rate').value) / 100 || 0;
+        
+        var baseValue = 0;
+        if (type === 'fee') baseValue = price; 
+        else baseValue = area * price; // 토지, 건물
+
+        // 변상금 = 재산가액 * 요율 * 1.2 * (점유일수/365)
+        var indemnity = baseValue * rate * 1.2 * (days / 365);
+        indemnity = Math.floor(indemnity); // 원단위 절사(통상적으로 원단위 또는 10원단위, 여기선 원단위 산출 후 총액 유지)
+
+        tr.querySelector('.indem-row-total').innerText = indemnity.toLocaleString();
+        tr.setAttribute('data-indem', indemnity);
+        
+        calcIndemGrandTotal();
+    }
+
+    function calcIndemGrandTotal() {
+        var grandTotal = 0;
+        document.querySelectorAll('#indemnityTableBody tr').forEach(function(row) { 
+            grandTotal += parseInt(row.getAttribute('data-indem')) || 0; 
+        });
+        // 보통 고지 시 10원 미만 절사(국고금단수계산법)를 적용하는 경우도 있으나, 변상금 총액은 그대로 표출
+        document.getElementById('indemGrandTotal').innerText = grandTotal.toLocaleString();
+    }
+
+    // =========================================================================
+    // 3. 탭 2: 다년도(구간별) 연체료 계산 로직
+    // =========================================================================
+    
+    function addLateRow() {
+        var tbody = document.getElementById('latefeeTableBody');
+        var tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <input type="date" class="late-start" style="margin-bottom:4px;" onchange="calcLateRow(this)">
+                <div style="text-align:center; font-size:0.8rem; font-weight:bold; color:#94a3b8; line-height:1;" class="print-hide">~</div>
+                <input type="date" class="late-end" style="margin-top:4px;" onchange="calcLateRow(this)">
+            </td>
+            <td><span class="late-days-txt" style="font-weight:bold;">0</span>일</td>
+            <td><input type="text" class="late-arrears" placeholder="체납액 입력" onkeyup="gFormatCurrency(this)"></td>
+            <td>
+                <span class="late-tier-txt" style="color:#0284c7; font-weight:bold; font-size:0.9rem;">기간을 입력하세요</span>
+            </td>
+            <td><span class="late-row-total" style="font-weight:bold; font-size:1.1rem; color:#0f172a;">0</span></td>
+            <td class="print-hide"><button class="btn-delete" onclick="delLateRow(this)">삭제</button></td>
+        `;
+        var arrearsInput = tr.querySelector('.late-arrears');
+        arrearsInput.oninput = function() { calcLateRow(this); };
+        
+        tbody.appendChild(tr);
+    }
+
+    function delLateRow(btn) {
+        var tbody = document.getElementById('latefeeTableBody');
+        if (tbody.children.length > 1) {
+            btn.closest('tr').remove();
+            calcLateGrandTotal();
+        } else alert("최소 1개의 연체 구간은 존재해야 합니다.");
+    }
+
+    function recalcAllLateRows() {
+        document.querySelectorAll('#latefeeTableBody .late-arrears').forEach(function(input) {
+            calcLateRow(input);
+        });
+    }
+
+    function calcLateRow(element) {
+        var tr = element.closest('tr');
+        
+        var startStr = tr.querySelector('.late-start').value;
+        var endStr = tr.querySelector('.late-end').value;
+        var arrears = parseFloat(tr.querySelector('.late-arrears').value.replace(/,/g, '')) || 0;
+        var isDisaster = document.getElementById('chkDisaster').checked;
+
+        var days = 0;
+        var rate = 0;
+        var tierText = "기간을 입력하세요";
+
+        if(startStr && endStr) {
+            var start = new Date(startStr);
+            var end = new Date(endStr);
+            
+            if(end >= start) {
+                // 연체료의 경우 순수 차이 일수를 씁니다 (초일불산입 원칙 적용시)
+                days = Math.floor((end.getTime() - start.getTime()) / (1000 * 3600 * 24)); 
+                if (days > 1825) days = 1825; // 최대 60개월(5년) 제한 통상 적용
+
+                // 개월 수 판별 (역월 기준)
+                var addMonths = function(date, months) {
+                    var d = new Date(date);
+                    d.setMonth(d.getMonth() + months);
+                    return d;
+                };
+
+                var t1 = addMonths(start, 1);
+                var t3 = addMonths(start, 3);
+                var t6 = addMonths(start, 6);
+
+                if (end < t1) { rate = 0.07; tierText = "1개월 미만 (연 7%)"; }
+                else if (end < t3) { rate = 0.08; tierText = "1~3개월 미만 (연 8%)"; }
+                else if (end < t6) { rate = 0.09; tierText = "3~6개월 미만 (연 9%)"; }
+                else { rate = 0.10; tierText = "6개월 이상 (연 10%)"; }
+            }
+        }
+        
+        tr.querySelector('.late-days-txt').innerText = days;
+        
+        if (isDisaster && rate > 0) {
+            rate *= 0.5;
+            tierText += "<br><span style='color:#e74c3c; font-size:0.8rem;'>(재난감면 50% 적용됨)</span>";
+        }
+        tr.querySelector('.late-tier-txt').innerHTML = tierText;
+
+        // 연체료 = 체납액 * 연체요율 * (연체일수 / 365)
+        var lateFee = arrears * rate * (days / 365);
+        tr.setAttribute('data-latefee', lateFee);
+        tr.querySelector('.late-row-total').innerText = Math.floor(lateFee).toLocaleString();
+        
+        calcLateGrandTotal();
+    }
+
+    function calcLateGrandTotal() {
+        var grandTotal = 0;
+        document.querySelectorAll('#latefeeTableBody tr').forEach(function(row) { 
+            grandTotal += parseFloat(row.getAttribute('data-latefee')) || 0; 
+        });
+        // 고지용 연체료는 국고금단수계산법에 따라 10원 미만 절사
+        grandTotal = Math.floor(grandTotal / 10) * 10;
+        document.getElementById('lateGrandTotal').innerText = grandTotal.toLocaleString();
+    }
+</script>
+
+</body>
+</html>
